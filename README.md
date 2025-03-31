@@ -1,4 +1,4 @@
-This is the template.
+Setup:
 1. Add scanned pages in the folder asset/page
 2. Name the pages indexed from 1.
 3. In the book.html line 53: change the number to the number of page + 1.
