@@ -1,0 +1,294 @@
+@font-face {
+    font-family: 'Sono';
+    src: url(asset/Sono.ttf);
+}
+@property --Page{
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+    
+}
+@property --RotY{
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+}
+@property --IndexZ{
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
+:root{
+    --MaxWindow:calc(max(1svw,1svh));
+}
+body{
+    margin: 0;
+    width:100%;
+    height:100svh;
+    overflow: hidden;
+    font-size: 0;
+    pointer-events: none;
+    user-select: none;
+}
+img{
+    user-select: none;
+    pointer-events: all;/**/
+}
+.TextSelect{
+    user-select:text;
+}
+.TextMedium{
+    font-size: medium;
+}
+input.InputHide{
+    border: none;
+    background-color: #0000;
+}
+#ViewControl{
+    position: absolute;
+    border: 0px solid #0008;
+    --width: calc(100svw - var(--barWidth));
+    --height: calc(100svh - var(--barWidth));
+    width: var(--width);
+    height: var(--height);
+    /*left:calc(50svw - var(--width) * 0.5);
+    top:calc(50svh - var(--height) * 0.5);/**/
+    /*background: 0 0/100% 100% no-repeat linear-gradient(to left,#0000 calc(100% - 2px), #000f calc(100% - 2px)),
+    0 0/100% 100% no-repeat linear-gradient(to right,#0000 calc(100% - 2px), #000f calc(100% - 2px)),
+    0 0/100% 100% no-repeat linear-gradient(to top,#0000 calc(100% - 2px), #000f calc(100% - 2px)),
+    0 0/100% 100% no-repeat linear-gradient(to bottom,#0000 calc(100% - 2px), #000f calc(100% - 2px));/**/
+}
+.Viewport{
+    position: absolute;
+}
+#BookScroll::-webkit-scrollbar, #BookScroll2::-webkit-scrollbar{
+    width: var(--barWidth);
+    height: var(--barWidth);
+}
+#BookScroll2::-webkit-scrollbar-track{
+    background-color: #0008;
+}
+#BookScroll2::-webkit-scrollbar-thumb{
+    background-color: #0008;
+    border-radius: calc(var(--barWidth) * 0.5);
+}
+#BookScroll2::-webkit-scrollbar-thumb:hover{
+    background-color: #8888;
+}
+
+#BookScroll2{
+    position: absolute;
+    background-color: #8088;
+    /*clip-path: polygon(0 0, calc(100% - var(--barWidth)) 0, calc(100% - var(--barWidth)) calc(100% - var(--barWidth)), 0 calc(100% - var(--barWidth)));/**/
+    width: calc(var(--width) + var(--barWidth));
+    height: calc(var(--height) + var(--barWidth));
+    overflow:scroll;
+}
+#BookScroll{
+    position: absolute;
+    background-color: #8088;
+    clip-path: polygon(0 0, calc(100% - var(--barWidth)) 0, calc(100% - var(--barWidth)) calc(100% - var(--barWidth)), 0 calc(100% - var(--barWidth)));/**/
+    width: calc(var(--width) + var(--barWidth));
+    height: calc(var(--height) + var(--barWidth));
+    overflow:scroll;
+}
+.SpacePadder{
+    position: absolute;
+    width: var(--width);
+    height: var(--height);
+    background: 0 0/100% 100% no-repeat radial-gradient(circle at 50% 50%,#0ff8 0, #f008 50%,#0ff8 100%);
+}
+#BookControl{
+    position: absolute;
+    background-color: #0008;
+    width: var(--width);
+    height: var(--height);
+}
+#BookControlZoom::before{
+    position: absolute;
+    left:50%;
+    top:50%;
+    transform: translate(-50%,-50%);
+    flex-grow: 1;
+    font-size: calc(var(--Size) * 0.5);
+    content: '🔍';
+}
+#BookControlZoom{
+    position: absolute;
+    background-color: #0008;
+    box-shadow: #0008 0 0 5px inset;
+    --Size: calc(max(8svh,20px));
+    width: var(--Size);
+    height: var(--Size);
+    left: 50%;
+    bottom:0;
+    transform: translate(-50%,0);
+    border-radius: var(--Size) var(--Size) 0 0;
+    transition: box-shadow 0.1s;
+}
+#BookControlZoom:hover, #BookControlZoom[data-active="1"]{
+    box-shadow: #fff8 0 0 10px inset;
+}
+#BookAnchor{
+    position: absolute;
+    left: calc(50% - 25% *(1 - min(var(--Page), 1)) + 25% *(1 - min(var(--MaxIndex) - var(--Page), 1)));
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    border: 0px solid #0008;
+    transition: left 0.5s;
+}
+#BookAnchor .BookL{
+    position: absolute;
+    --width2: calc(var(--width) * 0.5 - var(--BookMarginW));
+    --width3:calc(var(--width2) * (var(--ImgW)/(var(--ImgW) - var(--ImgCropW))));
+    --width4:calc(min(var(--width3),var(--height2) * var(--ImgW) / var(--ImgH)));
+    --CropW: calc(var(--width4) * var(--ImgCropW) / var(--ImgW));
+    --height2: calc(var(--height) - 2 * var(--BookMarginH));
+    --height3: calc(min(var(--height2), var(--width3) * var(--ImgH) / var(--ImgW)));
+    width: var(--width2);
+    height: var(--height2);
+    background-color: #00f0;
+    transform-origin: 100% 50%;
+    backface-visibility: hidden;
+    --RotY:calc(min(max(var(--Index) - var(--Page),0),1));
+    opacity: calc(4 * (0.5 - var(--RotY)));
+    transform: translate(-100%,-50%) rotateY(calc(var(--RotY) * 180deg));
+    transition: --RotY 0.5s;
+}
+#BookAnchor .BookR{
+    position: absolute;
+    --width2: calc(var(--width) * 0.5 - var(--BookMarginW));
+    --width3:calc(var(--width2) * (var(--ImgW)/(var(--ImgW) - var(--ImgCropW))));
+    --width4:calc(min(var(--width3),var(--height2) * var(--ImgW) / var(--ImgH)));
+    --CropW: calc(var(--width4) * var(--ImgCropW) / var(--ImgW));
+    --height2: calc(var(--height) - 2 * var(--BookMarginH));
+    --height3: calc(min(var(--height2), var(--width3) * var(--ImgH) / var(--ImgW)));
+    width: var(--width2);
+    height: var(--height2);
+    background-color: #0f00;
+    transform-origin: 0 50%;
+    backface-visibility: hidden;
+    --RotY:calc(min(max(var(--Index) - var(--Page),-1),0));
+    opacity: calc(4 * (0.5 + var(--RotY)));
+    transform: translate(0,-50%) rotateY(calc(var(--RotY) * 180deg));
+    transition-property: all;
+    transition: --RotY 0.5s;
+}
+#BookAnchor .BookL > img{
+    position: absolute;
+    right:calc(-1 * var(--CropW));
+    clip-path: polygon(0 0, calc(100% - var(--CropW)) 0, calc(100% - var(--CropW)) 100% , 0 100%);
+    width:var(--width4);
+    height:var(--height3);
+    top:50%;
+    transform: translate(0,-50%);
+}
+#BookAnchor .BookR > img{
+    position: absolute;
+    left:calc(-1 * var(--CropW));
+    clip-path: polygon(var(--CropW) 0, 100% 0, 100% 100% , var(--CropW) 100%);
+    width:var(--width4);
+    height:var(--height3);
+    top:50%;
+    transform: translate(0,-50%);
+}
+#BookAnchor .BookL > .Overlay,#BookAnchor .BookR > .Overlay{
+    position: absolute;
+    top:50%;
+    transform: translate(0,-50%);
+    --width5:calc(var(--width4) - var(--CropW));
+    width:var(--width5);
+    height:var(--height3);
+}
+#BookAnchor .BookL > .Overlay{
+    right:0;
+}
+#BookAnchor .BookR > .Overlay{
+    left:0;
+}
+#BookAnchor .BookL > .Overlay > .Flip, #BookAnchor .BookR > .Overlay > .Flip{
+    position: absolute;
+    top:0;
+    width: 5%;
+    height:100%;
+    background:0 50% / 100% 80% no-repeat linear-gradient(to right, #0000 45%,#0008 50%,#0000 55%);
+    pointer-events:all;
+    cursor: col-resize;
+}
+#BookAnchor .BookL > .Overlay > .Flip{
+    left: 0;
+}
+#BookAnchor .BookR > .Overlay > .Flip{
+    Right: 0;
+}
+#BookAnchor .BookL > .Overlay > .AreaFlag, #BookAnchor .BookR > .Overlay > .AreaFlag{
+    position: absolute;
+    width: 100%;
+    height:10%;
+    background-color: #8880;
+    pointer-events:all;
+    cursor: alias;
+}
+#BookAnchor .BookL > .Overlay > .Flag, #BookAnchor .BookR > .Overlay > .Flag{
+    position: absolute;
+    height: 20%;
+    width: 5%;
+    background-color: hsla(calc(var(--IndexColor) * 100 + 300),100%,50%,0.5);
+    pointer-events:all;
+}
+#BookAnchor .BookL > .Overlay > .Flag:hover, #BookAnchor .BookR > .Overlay > .Flag:hover{
+    box-shadow: 0 0 calc(var(--MaxWindow)) #fff8 inset;
+}
+#BookAnchor .BookL > .Overlay > .Flag > div.Mark, #BookAnchor .BookR > .Overlay > .Flag > div.Mark{
+    position: absolute;
+    left: 50%;
+    top: 20%;
+    transform: translate(-50%,-50%);
+    font-family: 'PMingLiU,Sono';/**/
+    font-size: calc(var(--width5)*0.05);/*0.05 comes from flag width */
+}
+#BookAnchor .BookL > .Overlay > .Flag > input.Mark, #BookAnchor .BookR > .Overlay > .Flag > input.Mark{
+    position: absolute;
+    left: 50%;
+    top: 20%;
+    width: calc(var(--width5)*0.05 - 4px);
+    height: 40%;
+    transform: translate(-50%,-50%);
+    font-size: 0;
+    border: 0;
+    outline: 0;
+    background-color: #0000;
+    pointer-events: none;
+}
+#BookAnchor .BookL > .Overlay > .Flag > input.Mark:focus, #BookAnchor .BookR > .Overlay > .Flag > input.Mark:focus{
+    background: 0 0 / 100% 100% no-repeat linear-gradient(to top, #000f 0.5svh, #0000 0.5svh);
+    border-width: 0 0 calc(var(--width5)*0.01) 0;
+    border-color: #f00f;
+    border-style: dotted;
+}
+#BookAnchor .BookL > .Overlay > .Flag > .Go, #BookAnchor .BookR > .Overlay > .Flag > .Go{
+    position: absolute;
+    width: 100%;
+    left: 0;
+    top: 0;
+    cursor: pointer;
+}
+#BookAnchor .BookL > .Overlay > .Flag > .Del, #BookAnchor .BookR > .Overlay > .Flag > .Del{
+    position: absolute;
+    width: 100%;
+    left: 0;
+    bottom: 0;
+    cursor: not-allowed;
+}
+#BookAnchor .BookL > img, #BookAnchor .BookR > img{
+    background-color: #888;
+}
+/*#BookAnchor .BookL > img::before, #BookAnchor .BookR > img::before{
+    content: ' ';
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #888;
+}/**/

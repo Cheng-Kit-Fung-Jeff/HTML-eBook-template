@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<link rel="stylesheet" href="book.css">
+<body onload="
+window.addEventListener('mousedown',(OutEvent)=>{
+    MouseDownS[''] |= 1 << OutEvent.button;//empty str for global
+});
+window.addEventListener('mouseup',(OutEvent)=>{
+    MouseDownS[''] &= -1-(1 << OutEvent.button);
+});
+let ViewControl = document.querySelector('#ViewControl');
+let BookControl = document.querySelector('#ViewControl #BookControl');
+let MouseDownS = {'':0,'ViewControl':0,'Body':0};
+//let MouseDownX = {'ViewControl':0};
+//let MouseDownY = {'ViewControl':0};
+//let EleX = {'ViewControl':0};
+//let EleY = {'ViewControl':0};
+/*document.querySelector('body').addEventListener('mousedown',(OnEvent)=>{
+    MouseDownS['Body'] = true;
+});
+document.querySelector('body').addEventListener('mouseup',(OnEvent)=>{
+    MouseDownS['Body'] = false;
+});*/
+
+const BookZoom = (WheelY,MouseX,MouseY) =>{
+    let FactorZoom = Math.pow(1.1,WheelY/120.0);
+    let ScrollPort = document.getElementById('BookScroll2');
+    let ParentX = ViewControl.getBoundingClientRect().left;
+    let ParentY = ViewControl.getBoundingClientRect().top;
+    let ParentW = ViewControl.getBoundingClientRect().width;
+    let ParentH = ViewControl.getBoundingClientRect().height;
+    let CurrZoom = parseFloat(ViewControl.style.getPropertyValue('--zoom'));
+    let NextZoom = CurrZoom * FactorZoom;
+    NextZoom = NextZoom <1 ? 1 : NextZoom;
+    NextZoom = NextZoom >256 ? 256 : NextZoom;
+    FactorZoom = NextZoom / CurrZoom;
+    let ScrollX = ScrollPort.scrollLeft/ScrollPort.scrollWidth;
+    let ScrollY = ScrollPort.scrollTop/ScrollPort.scrollHeight;
+    ViewControl.style.setProperty('--zoom',NextZoom);
+    let FactorDiff = (FactorZoom - 1);
+    ScrollPort.scrollLeft = Math.round(ScrollX*ScrollPort.scrollWidth + (MouseX - ParentX)*FactorDiff);
+    ScrollPort.scrollTop = Math.round(ScrollY*ScrollPort.scrollHeight + (MouseY - ParentY)*FactorDiff);
+}
+BookControl.addEventListener('wheel',(OutEvent)=>{
+    if (OutEvent.currentTarget !== OutEvent.target) return;
+    BookZoom(OutEvent.wheelDeltaY,OutEvent.clientX,OutEvent.clientY);
+});
+let BookSize = 103;
+let Format = 'png';
+let BookAnchor = document.getElementById('BookAnchor');
+BookAnchor.style.setProperty('--MaxIndex',Math.floor((BookSize-1) / 2.0));
+for(let n = 1; n < BookSize; n++){
+    let BookAnchor = document.getElementById('BookAnchor');
+    let NewPage = document.createElement('div');
+    let NewOverlayBack = document.createElement('div');
+    let NewImg = document.createElement('img');
+    let NewOverlay = document.createElement('div');
+    let NewFlip = document.createElement('div');
+    let NewAreaFlag = document.createElement('div');
+    NewPage.classList.add((n & 1) === 0 ? 'BookL':'BookR');
+    NewPage.setAttribute('style',`--Index:${Math.floor(n / 2.0)}`);
+    NewPage.addEventListener('transitionend',(OutEvent)=>{
+        //console.log(`${[...BookAnchor.children].findIndex((e)=>e===NewPage)} ended transition`)
+        if (NewPage.getAttribute('data-transition') !== '1' && NewPage.style.getPropertyValue('--Index') !== BookAnchor.style.getPropertyValue('--Page')){
+            //console.log(`and removed`);
+            let Pages = BookAnchor.children;
+            let ThisIndex = parseInt(NewPage.style.getPropertyValue('--Index'));
+            let CheckIndex = Math.floor(Pages.length * 0.5) + ThisIndex - 1;
+            Pages[CheckIndex].children[1].style.setProperty('display','none');
+            if (ThisIndex === 0) return;
+            CheckIndex -= ThisIndex + ThisIndex;
+            if (CheckIndex > -1) Pages[CheckIndex].children[1].style.setProperty('display','none');
+        }})
+    NewOverlayBack.classList.add('Overlay');
+    NewImg.setAttribute('src',`asset/page/${n}.${Format}`);
+    NewImg.setAttribute('style',`display:${n === 1 ?'unset':'none'};`);
+    NewOverlay.classList.add('Overlay');
+    NewFlip.classList.add('Flip');
+    NewFlip.setAttribute('onclick',`
+    let NextIndex = ${Math.floor(n * 0.5) + ((n & 1) === 0 ? -1 : 1)};
+    this.parentElement.parentElement.setAttribute('data-transition','0');
+    this.parentElement.parentElement.parentElement.style.setProperty('--Page',NextIndex);
+    let Pages = this.parentElement.parentElement.parentElement.children;
+    let CheckIndex = Math.floor(Pages.length * 0.5) - NextIndex - 1;
+    if (CheckIndex > -1){
+        ${(n & 1) === 0? `Pages[CheckIndex].setAttribute('data-transition','1');`:''}
+        Pages[CheckIndex].children[1].style.setProperty('display','unset');
+    }
+    CheckIndex += NextIndex + NextIndex;
+    if (CheckIndex < Pages.length) {
+        ${(n & 1) === 1? `Pages[CheckIndex].setAttribute('data-transition','1');`:''}
+        Pages[CheckIndex].children[1].style.setProperty('display','unset');
+    }
+    `
+    );
+    NewAreaFlag.classList.add('AreaFlag');
+    NewAreaFlag.setAttribute('onclick',`
+    let FlagW = 0.05;
+    let Pages = [...this.parentElement.parentElement.parentElement.children];
+    let MirrorOverlay = Pages[Pages.length - Pages.findIndex((e)=>this.parentElement.parentElement === e) - 1].children[0];
+    let ThisRect = this.parentElement.getBoundingClientRect();
+    let RelX = (window.event.clientX - ThisRect.x) / ThisRect.width;
+    let RelY = (window.event.clientY - ThisRect.y) / ThisRect.height;
+    RelX -= FlagW * 0.5;
+    RelX = RelX < 0 ? 0: RelX > (1 - FlagW) ? 1 - FlagW : RelX;
+    RelY += 0.02;
+    RelY = RelY < 0.04 ? 0.04 : RelY > 0.12 ? 0.12 : RelY;// 0.12 is based on css parameters of AreaFlag.height and not generalised
+    let NewFlag = document.createElement('div');
+    let NewFlagMark = document.createElement('div');
+    let NewFlagMarkInput = document.createElement('input');
+    let NewFlagGo = document.createElement('div');
+    let NewFlagDel = document.createElement('div');
+    let NewFlagMirror = document.createElement('div');
+    let NewFlagMirrorMark = document.createElement('div');
+    let NewFlagMirrorGo = document.createElement('div');
+    NewFlagMark.classList.add('Mark');
+    NewFlagMarkInput.classList.add('Mark');
+    NewFlagMarkInput.setAttribute('onfocus',\`this.value = ' ';this.selectionStart=0;this.selectionEnd=1;\`);
+    NewFlagMarkInput.setAttribute('oninput',\`
+    let Pages = [...this.parentElement.parentElement.parentElement.parentElement.children];
+    let ThisIndex = [...this.parentElement.parentElement.children].findIndex((e)=>this.parentElement === e) - 2;// - 2 depends on the number of init elements
+    let FlagsMirror = Pages[Pages.length - Pages.findIndex((e)=>this.parentElement.parentElement.parentElement === e) - 1].children[0].children;
+    let SetValue = this.value.charAt(this.value.length-1);
+    FlagsMirror[FlagsMirror.length - ThisIndex - 1].children[0].innerHTML = SetValue;
+    this.parentElement.children[0].innerHTML = SetValue;
+    this.value = this.value === '' ? ' ': this.value;
+    console.log(this.value)
+    this.selectionStart=0;
+    this.selectionEnd=this.value.length;
+    \`);
+    NewFlagGo.classList.add('Go');
+    NewFlagGo.setAttribute('style',\`height:\${100 - RelY * 100 * 5}%\`);// RelY is based on css parameters of Flag.height and not generalised
+    NewFlagGo.setAttribute('onclick',\`
+    let ThisIndex = \${this.parentElement.parentElement.style.getPropertyValue('--Index')};
+    let BookAnchor = this.parentElement.parentElement.parentElement.parentElement;
+    if (parseInt(BookAnchor.style.getPropertyValue('--Page')) === ThisIndex){this.parentElement.children[1].focus();return;}
+    let Pages = BookAnchor.children;
+    Pages[Math.floor(Pages.length * 0.5) ${(n&1) === 0 ?'+':'-'} parseInt(BookAnchor.style.getPropertyValue('--Page')) - 1].setAttribute('data-transition','0');
+    BookAnchor.style.setProperty('--Page',ThisIndex);
+    let CheckIndex = Math.floor(Pages.length * 0.5) + ThisIndex - 1;
+    Pages[CheckIndex].children[1].style.setProperty('display','unset');
+    if (ThisIndex === 0) return;
+    ${(n&1)===0?'':`Pages[CheckIndex].setAttribute('data-transition','1');`}
+    Pages[CheckIndex].setAttribute('data-transition','1');
+    CheckIndex -= ThisIndex + ThisIndex;
+    if (CheckIndex > -1){Pages[CheckIndex].children[1].style.setProperty('display','unset');${(n&1)===0?`Pages[CheckIndex].setAttribute('data-transition','1');`:''}}
+    \`);
+    NewFlagGo.addEventListener('wheel',(OutEvent)=>{
+    if (BookAnchor.style.getPropertyValue('--Page') === this.parentElement.parentElement.style.getPropertyValue('--Index')){
+        let WheelY = Math.round(OutEvent.wheelDeltaY / 120);
+        let NewColorIndex = parseInt(NewFlag.style.getPropertyValue('--IndexColor'))+WheelY;
+        NewFlag.style.setProperty('--IndexColor', NewColorIndex);
+        NewFlagMirror.style.setProperty('--IndexColor', NewColorIndex);
+    }
+    });
+    NewFlagDel.classList.add('Del');
+    NewFlagDel.setAttribute('style',\`height:\${RelY * 100 * 5}%;background-color:#0004\`);// RelY is based on css parameters of Flag.height and not generalised
+    NewFlagDel.setAttribute('onclick',\`
+    let Pages = [...this.parentElement.parentElement.parentElement.parentElement.children];
+    let ThisIndex = [...this.parentElement.parentElement.children].findIndex((e)=>this.parentElement === e) - 2;// - 2 depends on the number of init elements
+    let FlagsMirror = Pages[Pages.length - Pages.findIndex((e)=>this.parentElement.parentElement.parentElement === e) - 1].children[0].children;
+    FlagsMirror[FlagsMirror.length - ThisIndex - 1].remove();
+    this.parentElement.remove();
+    \`);
+    NewFlag.classList.add('Flag');
+    NewFlag.setAttribute('style',\`${'left'}:\${RelX * 100}%;top:\${RelY * 100}%;transform: translate(0,-100%);--IndexColor:0;\`);
+    NewFlagMirror.classList.add('Flag');
+    NewFlagMirror.setAttribute('style',\`${'right'}:\${RelX * 100}%;top:\${RelY * 100}%;transform: translate(0,-100%) rotateY(180deg);--IndexColor:0;\`);
+    NewFlagMirrorMark.classList.add('Mark');
+    NewFlagMirrorGo.classList.add('Go');
+    NewFlagMirrorGo.setAttribute('style',\`height:\${100 - RelY * 100 * 5}%\`);// RelY is based on css parameters of Flag.height and not generalised
+    NewFlagMirrorGo.setAttribute('onclick',\`
+    let ThisIndex = \${this.parentElement.parentElement.style.getPropertyValue('--Index')};
+    let BookAnchor = this.parentElement.parentElement.parentElement.parentElement;
+    if (parseInt(BookAnchor.style.getPropertyValue('--Page')) === ThisIndex) return;
+    let Pages = BookAnchor.children;
+    Pages[Math.floor(Pages.length * 0.5) ${(n&1)===0?'-':'+'} parseInt(BookAnchor.style.getPropertyValue('--Page')) - 1].setAttribute('data-transition','0');
+    BookAnchor.style.setProperty('--Page',ThisIndex);
+    let CheckIndex = Math.floor(Pages.length * 0.5) + ThisIndex - 1;
+    if (CheckIndex < Pages.length) Pages[CheckIndex].children[1].style.setProperty('display','unset');
+    if (ThisIndex === 0) return;
+    ${(n&1)===0?`Pages[CheckIndex].setAttribute('data-transition','1');`:''}
+    CheckIndex -= ThisIndex + ThisIndex;
+    if (CheckIndex>-1) {Pages[CheckIndex].children[1].style.setProperty('display','unset');${(n&1)===0 ?'':`Pages[CheckIndex].setAttribute('data-transition','1');`}}
+    \`);
+    NewFlag.append(NewFlagMark);
+    NewFlag.append(NewFlagMarkInput);
+    NewFlag.append(NewFlagGo);
+    NewFlag.append(NewFlagDel);
+    this.parentElement.append(NewFlag);
+    NewFlagMirror.append(NewFlagMirrorMark);
+    NewFlagMirror.append(NewFlagMirrorGo);
+    MirrorOverlay.prepend(NewFlagMirror);
+    `);
+    NewPage.append(NewOverlayBack);
+    NewPage.append(NewImg);
+    NewOverlay.append(NewFlip);
+    NewOverlay.append(NewAreaFlag);
+    NewPage.append(NewOverlay);
+    if ((n & 1) === 0){
+        BookAnchor.append(NewPage);
+    }
+    else{
+        BookAnchor.prepend(NewPage);
+    }
+    
+}
+"
+data-MouseX="0" data-MouseY="0"
+>
+    <div id="ViewControl" style="--left:30;--top:20;overflow:visible;--zoom:1;--barWidth: calc(max(var(--MaxWindow),20px));"
+    data-WheelY="0"
+    >
+        <div id="BookScroll2" style="pointer-events: all;"
+        onscroll="let MScroll = document.getElementById('BookScroll');MScroll.scrollLeft = this.scrollLeft;MScroll.scrollTop = this.scrollTop;">
+            <div class="Viewport" style="zoom: var(--zoom)">
+                <div class="SpacePadder"></div>
+            </div>
+        </div>
+        <div id="BookScroll" onscroll="
+        let MScroll = document.getElementById('BookScroll2');
+        this.scrollLeft = (MScroll.scrollWidth - MScroll.clientWidth) < this.scrollLeft?MScroll.scrollWidth - MScroll.clientWidth:this.scrollLeft;
+        this.scrollTop = (MScroll.scrollHeight - MScroll.clientHeight) < this.scrollTop?MScroll.scrollHeight - MScroll.clientHeight:this.scrollTop;
+        MScroll.scrollLeft = this.scrollLeft;
+        MScroll.scrollTop = this.scrollTop;
+        ">
+            <div class="Viewport" style="zoom: var(--zoom)">
+                <div class="SpacePadder">
+                    <div id="BookAnchor" style="--BookMarginW:2svw;--BookMarginH:6svh;perspective: 4000px;--Page:0;--MaxIndex:0;
+                    --ImgW:3188;--ImgH:2302;--ImgCropW:200;">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="pointer-events: all;">
+            <div id="BookControlZoom" style="display: block;pointer-events: all;" data-active="0"
+            onclick="
+            this.style.setProperty('pointer-events','none');
+            this.setAttribute('data-active','1');
+            this.style.setProperty('z-index','1');
+            document.getElementById('BookControl').style.setProperty('display','block');
+            "></div>
+            <div id="BookControl" style="display: none; z-index: 0;"
+            onclick="this.style.setProperty('display','none');
+            document.getElementById('BookControlZoom').setAttribute('data-active','0');
+            document.getElementById('BookControlZoom').style.setProperty('z-index','0');
+            document.getElementById('BookControlZoom').style.setProperty('pointer-events','all');
+            "></div>
+        ">=+</div>
+        </div>
+    </div>
+</body>
+</html>
